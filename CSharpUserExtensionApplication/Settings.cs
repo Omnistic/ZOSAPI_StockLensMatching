@@ -892,6 +892,10 @@ namespace Reverse_SLM
 
         static void applyCatalogSettings(ILensCatalogs TheLensCatalog, int elemCount, double EFL, double EPD, double eflTolerance, double epdTolerance, string vendor)
         {
+            // Scale tolerances
+            eflTolerance /= 100;
+            epdTolerance /= 100;
+
             // Vendor
             TheLensCatalog.SelectedVendor = vendor;
 
