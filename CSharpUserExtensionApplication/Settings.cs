@@ -594,10 +594,10 @@ namespace Reverse_SLM
                             TheLensCatalog.Close();
 
                             // Check that material is within wavelength bounds (has to be done after closing the lens catalog)
-                            for (int material_id = 0; material_id < elemCount; material_id++)
+                            for (int materialID = 0; materialID < elemCount; materialID++)
                             {
                                 // Material of every element of the lens
-                                curMaterial = TheSystemCopy.LDE.GetSurfaceAt(lenStart + material_id).Material;
+                                curMaterial = TheSystemCopy.LDE.GetSurfaceAt(lenStart + materialID).Material;
 
                                 // Open the material catalog
                                 TheMaterialsCatalog = TheSystemCopy.Tools.OpenMaterialsCatalog();
@@ -711,6 +711,17 @@ namespace Reverse_SLM
 
                             // Load the copy of the original system
                             TheSystemCopy.LoadFile(tempPath, false);
+
+
+
+
+
+
+
+
+
+
+
                         }
                         else
                         {
@@ -829,6 +840,7 @@ namespace Reverse_SLM
             line = "Both orientations:\t\t" + reverseElements.ToString() + "\r\n";
             lines.Add(line);
 
+            // Results
             line = "Number of Lenses Matched: " + nominalLenses.Count.ToString() + "\r\n";
             lines.Add(line);
 
@@ -836,8 +848,27 @@ namespace Reverse_SLM
             {
                 line = "> WARNING: At least one lens with more than ";
                 line += MAX_ELEMENTS.ToString();
-                line += " elements has been ignored(unsupported) ... ";
+                line += " elements has been ignored(unsupported) ... \r\n";
                 lines.Add(line);
+            }
+
+            for (int ii = 0; ii < nominalLenses.Count; ii++)
+            {
+                line = "Component " + (ii + 1).ToString();
+                line += " (Surfaces " + nominalLenses[ii].StartSurf.ToString() + "-";
+                line += (nominalLenses[ii].StartSurf + nominalLenses[ii].ElemCount).ToString();
+                line += ")\t\t\t\t\tMF Value\t\tMF Change\t\tIs Reversed?";
+                lines.Add(line);
+
+                for (int jj = 0; jj < matches; jj++)
+                {
+                    line = jj.ToString() + ") " + bestMatches[ii, jj].Name + "(";
+                    line += bestMatches[ii, jj].Vendor + ")\t\t\t\t\t";
+                    line += bestMatches[ii, jj].MatchedMF + "\t";
+                    line += Math.Abs(nominalMF - bestMatches[ii, jj].MatchedMF);
+                    line += "\t" + bestMatches[ii, jj].IsReversed;
+                    lines.Add(line);
+                }
             }
 
             // Write lines to text file
