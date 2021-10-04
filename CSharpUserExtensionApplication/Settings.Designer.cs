@@ -276,6 +276,7 @@ namespace Reverse_SLM
             this.btnTerminate.TabIndex = 20;
             this.btnTerminate.Text = "Terminate";
             this.btnTerminate.UseVisualStyleBackColor = true;
+            this.btnTerminate.Visible = false;
             this.btnTerminate.Click += new System.EventHandler(this.btnTerminate_Click);
             // 
             // Settings

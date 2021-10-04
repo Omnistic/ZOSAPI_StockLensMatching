@@ -49,8 +49,6 @@ namespace Reverse_SLM
             comboCycles.SelectedIndex = 0;
         }
 
-        public bool Terminate = false;
-
         public ZOSAPI_Connection TheConnection;
         public IZOSAPI_Application TheApplication;
         public IOpticalSystem TheSystem;
@@ -192,16 +190,24 @@ namespace Reverse_SLM
             bool insertionErrorFlag = false;
             bool materialError = false;
             bool materialErrorFlag = false;
+            bool combinations = true;
+            bool mfError = false;
+            bool missingMatch = false;
 
             // Variables
             int elemCount = 0;
             int lenStart = -1;
             int totalMatches = -1;
             int vendorMatches = -1;
+            int remainder, digitPower, nominalIndex;
             double EFL;
             double EPD = -1.0;
             double nominalMF, reverseMF, curMF, thicknessAfter;
-            string curMaterial, prevMaterial, mfPath, tempMess;
+            string curMaterial, prevMaterial, mfPath, tempMess, vendor;
+            string debugStr = "";
+            List<int> indices = new List<int>();
+            combination[] bestCombinations;
+            catalogLens[] catalogLensArray;
             ILensDataEditor TheLDE = TheSystem.LDE;
             ISolveData ThicknessSolve;
             ILensCatalogs TheLensCatalog;
@@ -269,6 +275,9 @@ namespace Reverse_SLM
 
             // How many matches to show?
             matches = (int)numMatches.Value;
+
+            // Initialize best combinations (if needed)
+            bestCombinations = new combination[matches];
 
             // What are the tolerances?
             eflTolerance = float.Parse(tbxEFL.Text);
@@ -476,6 +485,9 @@ namespace Reverse_SLM
                 return;
             }
 
+            // Initialize array of catalog lenses for a single combination
+            catalogLensArray = new catalogLens[nominalLenses.Count];
+
             // Create a temporary file to evaluate the matches
             string[] tempFolder = { dataDir, "DeleteMe.ZMX" };
             string tempPath = Path.Combine(tempFolder);
@@ -561,138 +573,144 @@ namespace Reverse_SLM
                         // Indicator to compare the reversed-element MF value
                         reverseMF = double.PositiveInfinity;
 
-                        // Check if terminate was pressed
-                        if (!this.Terminate)
+                        // Run the lens catalog once again and for every match (it needs to be closed for the optimization tool to be opened)
+                        // Feature request: can we have a field to search for a specific lens by its name?
+                        TheLensCatalog = TheSystemCopy.Tools.OpenLensCatalogs();
+                        applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
+                        TheLensCatalog.RunAndWaitForCompletion();
+
+                        // Retrieve the corresponding matched lens
+                        MatchedLens = TheLensCatalog.GetResult(matchID);
+
+                        // Save the air thickness before next lens
+                        thicknessAfter = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness;
+                        ThicknessSolve = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.GetSolveData();
+
+                        // Remove ideal lens
+                        TheSystemCopy.LDE.RemoveSurfacesAt(lenStart, elemCount + 1);
+
+                        // Insert matching lens
+                        if (!MatchedLens.InsertLensSeq(lenStart, ignoreObject, reverseGeometry))
                         {
-                            // Run the lens catalog once again and for every match (it needs to be closed for the optimization tool to be opened)
-                            // Feature request: can we have a field to search for a specific lens by its name?
-                            TheLensCatalog = TheSystemCopy.Tools.OpenLensCatalogs();
-                            applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
-                            TheLensCatalog.RunAndWaitForCompletion();
+                            insertionErrorFlag = true;
+                        }
 
-                            // Retrieve the corresponding matched lens
-                            MatchedLens = TheLensCatalog.GetResult(matchID);
+                        // Restore thickness
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness = thicknessAfter;
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.SetSolveData(ThicknessSolve);
 
-                            // Save the air thickness before next lens
-                            thicknessAfter = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness;
-                            ThicknessSolve = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.GetSolveData();
+                        // Close the lens catalog tool
+                        TheLensCatalog.Close();
 
-                            // Remove ideal lens
-                            TheSystemCopy.LDE.RemoveSurfacesAt(lenStart, elemCount + 1);
+                        // Check that material is within wavelength bounds (has to be done after closing the lens catalog)
+                        for (int materialID = 0; materialID < elemCount; materialID++)
+                        {
+                            // Material of every element of the lens
+                            curMaterial = TheSystemCopy.LDE.GetSurfaceAt(lenStart + materialID).Material;
 
-                            // Insert matching lens
-                            if (!MatchedLens.InsertLensSeq(lenStart, ignoreObject, reverseGeometry))
+                            // Open the material catalog
+                            TheMaterialsCatalog = TheSystemCopy.Tools.OpenMaterialsCatalog();
+
+                            if (!materialIsCompatible(TheMaterialsCatalog, curMaterial, maxWave, minWave))
                             {
-                                insertionErrorFlag = true;
+                                totalMatches--;
+                                materialErrorFlag = true;
                             }
 
-                            // Restore thickness
-                            TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness = thicknessAfter;
-                            TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.SetSolveData(ThicknessSolve);
+                            // Close the material catalog
+                            TheMaterialsCatalog.Close();
+                        }
 
-                            // Close the lens catalog tool
-                            TheLensCatalog.Close();
+                        // Load MF
+                        TheSystemCopy.MFE.LoadMeritFunction(mfPath);
 
-                            // Check that material is within wavelength bounds (has to be done after closing the lens catalog)
-                            for (int materialID = 0; materialID < elemCount; materialID++)
+                        // Update progress
+                        tempMess = "Evaluating: Lens " + (nominalLensID + 1).ToString() + "/" + nominalLenses.Count.ToString();
+                        tempMess += " | Vendor " + (vendorID + 1).ToString() + "/" + (vendors.Length).ToString();
+                        tempMess += " | Match " + (matchID + 1).ToString() + "/" + (vendorMatches).ToString();
+                        TheApplication.ProgressMessage = tempMess;
+
+                        // Report insertion and material errors
+                        if (materialErrorFlag)
+                        {
+                            materialError = true;
+                        }
+                        if (insertionErrorFlag)
+                        {
+                            insertionError = true;
+                        }
+
+                        if (!materialErrorFlag && !insertionErrorFlag)
+                        {
+                            if (airCompensation)
                             {
-                                // Material of every element of the lens
-                                curMaterial = TheSystemCopy.LDE.GetSurfaceAt(lenStart + materialID).Material;
-
-                                // Open the material catalog
-                                TheMaterialsCatalog = TheSystemCopy.Tools.OpenMaterialsCatalog();
-
-                                if (!materialIsCompatible(TheMaterialsCatalog, curMaterial, maxWave, minWave))
+                                // Run the local optimizer
+                                ILocalOptimization TheOptimizer = TheSystemCopy.Tools.OpenLocalOptimization();
+                                TheOptimizer.Algorithm = ZOSAPI.Tools.Optimization.OptimizationAlgorithm.DampedLeastSquares;
+                                switch (optimizationCycles)
                                 {
-                                    totalMatches--;
-                                    materialErrorFlag = true;
+                                    case 0:
+                                        TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Automatic;
+                                        break;
+                                    case 1:
+                                        TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_1_Cycle;
+                                        break;
+                                    case 2:
+                                        TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_5_Cycles;
+                                        break;
+                                    case 3:
+                                        TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_10_Cycles;
+                                        break;
+                                    case 4:
+                                        TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_50_Cycles;
+                                        break;
                                 }
+                                TheOptimizer.RunAndWaitForCompletion();
 
-                                // Close the material catalog
-                                TheMaterialsCatalog.Close();
-                            }
+                                // Retrieve the MF value
+                                curMF = TheOptimizer.CurrentMeritFunction;
 
-                            // Load MF
-                            TheSystemCopy.MFE.LoadMeritFunction(mfPath);
-
-                            // Update progress
-                            tempMess = "Matching: Lens " + (nominalLensID + 1).ToString() + "/" + nominalLenses.Count.ToString();
-                            tempMess += " | Vendor " + (vendorID + 1).ToString() + "/" + (vendors.Length).ToString();
-                            tempMess += " | Match " + (matchID + 1).ToString() + "/" + (vendorMatches).ToString();
-                            TheApplication.ProgressMessage = tempMess;
-
-                            // Report insertion and material errors
-                            if (materialErrorFlag)
-                            {
-                                materialError = true;
-                            }
-                            if (insertionErrorFlag)
-                            {
-                                insertionError = true;
-                            }
-
-                            if (!materialErrorFlag && !insertionErrorFlag)
-                            {
-                                if (airCompensation)
+                                // Lens reversal enabled?
+                                if (reverseElements)
                                 {
-                                    // Run the local optimizer
-                                    ILocalOptimization TheOptimizer = TheSystemCopy.Tools.OpenLocalOptimization();
-                                    TheOptimizer.Algorithm = ZOSAPI.Tools.Optimization.OptimizationAlgorithm.DampedLeastSquares;
-                                    switch (optimizationCycles)
-                                    {
-                                        case 0:
-                                            TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Automatic;
-                                            break;
-                                        case 1:
-                                            TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_1_Cycle;
-                                            break;
-                                        case 2:
-                                            TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_5_Cycles;
-                                            break;
-                                        case 3:
-                                            TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_10_Cycles;
-                                            break;
-                                        case 4:
-                                            TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_50_Cycles;
-                                            break;
-                                    }
+                                    // Reverse the matched lens
+                                    TheLDECopy.RunTool_ReverseElements(lenStart, lenStart + elemCount);
+
+                                    // Re-run the optimizer
                                     TheOptimizer.RunAndWaitForCompletion();
 
                                     // Retrieve the MF value
-                                    curMF = TheOptimizer.CurrentMeritFunction;
-
-                                    // Lens reversal enabled?
-                                    if (reverseElements)
-                                    {
-                                        // Reverse the matched lens
-                                        TheLDECopy.RunTool_ReverseElements(lenStart, lenStart + elemCount);
-
-                                        // Re-run the optimizer
-                                        TheOptimizer.RunAndWaitForCompletion();
-
-                                        // Retrieve the MF value
-                                        reverseMF = TheOptimizer.CurrentMeritFunction;
-                                    }
-
-                                    // Close the optimizer
-                                    TheOptimizer.Close();
+                                    reverseMF = TheOptimizer.CurrentMeritFunction;
                                 }
-                                else
+
+                                // Close the optimizer
+                                TheOptimizer.Close();
+                            }
+                            else
+                            {
+                                // Retrieve the MF value
+                                curMF = TheSystemCopy.MFE.CalculateMeritFunction();
+
+                                // Lens reversal enabled?
+                                if (reverseElements)
                                 {
+                                    // Reverse the matched lens
+                                    TheLDECopy.RunTool_ReverseElements(lenStart, lenStart + elemCount);
+
                                     // Retrieve the MF value
-                                    curMF = TheSystemCopy.MFE.CalculateMeritFunction();
-
-                                    // Lens reversal enabled?
-                                    if (reverseElements)
-                                    {
-                                        // Reverse the matched lens
-                                        TheLDECopy.RunTool_ReverseElements(lenStart, lenStart + elemCount);
-
-                                        // Retrieve the MF value
-                                        reverseMF = TheSystemCopy.MFE.CalculateMeritFunction();
-                                    }
+                                    reverseMF = TheSystemCopy.MFE.CalculateMeritFunction();
                                 }
+                            }
 
+                            // I will assume that if the MF value is zero, there has been an error when calculating the MF.
+                            // It means that a perfect solution with a MF value of zero will be ignored.
+                            // However, I think it is unlikely to occur with stock lenses.
+                            if (curMF == 0 || reverseMF == 0)
+                            {
+                                mfError = true;
+                            }
+                            else
+                            {
                                 if (reverseMF < curMF)
                                 {
                                     // Is it a best match?
@@ -704,42 +722,209 @@ namespace Reverse_SLM
                                     isBestMatch(TheSystemCopy, saveBest, bestPath, bestMatches, nominalLensID, matchID, false, curMF, MatchedLens.LensName, MatchedLens.Vendor);
                                 }
                             }
-
-                            // Restore error flags for next match
-                            materialErrorFlag = false;
-                            insertionErrorFlag = false;
-
-                            // Load the copy of the original system
-                            TheSystemCopy.LoadFile(tempPath, false);
-
-
-
-
-
-
-
-
-
-
-
                         }
-                        else
-                        {
-                            // Enable/disable buttons
-                            btnLaunch.Enabled = true;
-                            btnCancel.Enabled = true;
-                            btnTerminate.Enabled = false;
 
-                            return;
-                        }
+                        // Restore error flags for next match
+                        materialErrorFlag = false;
+                        insertionErrorFlag = false;
+
+                        // Load the copy of the original system
+                        TheSystemCopy.LoadFile(tempPath, false);
                     }
+                }
+
+                // If there are no matches at all for this nominal lens
+                if (totalMatches == 0)
+                {
+                    // don't investigate combinations
+                    combinations = false;
                 }
             }
 
+            // If combinations
+            if (combinations && nominalLenses.Count > 1)
+            {
+                // Initialize array of best combinations
+                for (int ii = 0; ii < matches; ii++)
+                {
+                    bestCombinations[ii] = new combination(nominalLenses.Count, null, double.PositiveInfinity);
+                }
+                
+                // Enumerate combinations in base "matches". For example, if we show 5 matches and we have
+                // two lenses, that is 5^2 = 25 combinations. If we enumerate those combinations in base 5
+                // we get 00, 01, 02, 03, 04, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34,
+                // 40, 41, 42, 43, 44. The first digit is the best match of the first lens, and the second
+                // digit is the best match of the second lens.
+                for (int ii = 0; ii < (int)Math.Pow(matches, nominalLenses.Count); ii++)
+                {
+                    // Update progress
+                    tempMess = "Evaluating: Combination " + (ii + 1).ToString() + "/" + ((int)Math.Pow(matches, nominalLenses.Count)).ToString();
+                    TheApplication.ProgressMessage = tempMess;
+
+                    // Clear previous indices (if any)
+                    indices.Clear();
+
+                    // This variable is redundant, but it helps me read the code
+                    remainder = ii;
+
+                    // For one combination, find indices of the best lenses matched
+                    for (int jj = nominalLenses.Count - 1; jj > -1; jj--)
+                    {
+                        digitPower = (int)Math.Pow(matches, jj);
+
+                        if (remainder / (digitPower * matches) > 0)
+                        {
+                            remainder -= (remainder / (digitPower * matches)) * digitPower * matches;
+                        }
+
+                        indices.Add(remainder / digitPower);
+                    }
+
+                    // Create the combination file
+                    TheLensCatalog = TheSystemCopy.Tools.OpenLensCatalogs();
+
+                    nominalIndex = 0;
+
+                    foreach(int index in indices)
+                    {
+                        // Nominal lens properties
+                        elemCount = nominalLenses[nominalIndex].ElemCount;
+                        lenStart = nominalLenses[nominalIndex].StartSurf;
+                        EFL = nominalLenses[nominalIndex].EFL;
+                        EPD = nominalLenses[nominalIndex].EPD;
+
+                        // Update combination array
+                        catalogLensArray[nominalIndex] = bestMatches[nominalIndex, index];
+
+                        // Best matching lens properties
+                        vendor = bestMatches[nominalIndex, index].Vendor;
+
+                        if (vendor == "")
+                        {
+                            missingMatch = true;
+                            break;
+                        }
+
+                        // Apply catalog settings to retrieve the corresponding best match
+                        applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendor);
+                        TheLensCatalog.RunAndWaitForCompletion();
+
+                        // Retrieve the corresponding matched lens
+                        MatchedLens = TheLensCatalog.GetResult(bestMatches[nominalIndex, index].MatchID);
+
+                        // Save the air thickness before next lens
+                        thicknessAfter = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness;
+                        ThicknessSolve = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.GetSolveData();
+
+                        // Remove ideal lens
+                        TheSystemCopy.LDE.RemoveSurfacesAt(lenStart, elemCount + 1);
+
+                        // Insert matching lens
+                        MatchedLens.InsertLensSeq(lenStart, ignoreObject, reverseGeometry);
+
+                        // Reverse matching lens (if necessary)
+                        if (bestMatches[nominalIndex, index].IsReversed)
+                        {
+                            // Reverse the matched lens
+                            TheLDECopy.RunTool_ReverseElements(lenStart, lenStart + elemCount);
+                        }
+
+                        // Restore thickness
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness = thicknessAfter;
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.SetSolveData(ThicknessSolve);
+
+                        nominalIndex++;
+                    }
+
+                    TheLensCatalog.Close();
+
+                    if (missingMatch)
+                    {
+                        continue;
+                    }
+
+                    // Load MF
+                    TheSystemCopy.MFE.LoadMeritFunction(mfPath);
+
+                    if (airCompensation)
+                    {
+                        // Run the local optimizer
+                        ILocalOptimization TheOptimizer = TheSystemCopy.Tools.OpenLocalOptimization();
+                        TheOptimizer.Algorithm = ZOSAPI.Tools.Optimization.OptimizationAlgorithm.DampedLeastSquares;
+                        switch (optimizationCycles)
+                        {
+                            case 0:
+                                TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Automatic;
+                                break;
+                            case 1:
+                                TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_1_Cycle;
+                                break;
+                            case 2:
+                                TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_5_Cycles;
+                                break;
+                            case 3:
+                                TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_10_Cycles;
+                                break;
+                            case 4:
+                                TheOptimizer.Cycles = ZOSAPI.Tools.Optimization.OptimizationCycles.Fixed_50_Cycles;
+                                break;
+                        }
+                        TheOptimizer.RunAndWaitForCompletion();
+
+                        // Retrieve the MF value
+                        curMF = TheOptimizer.CurrentMeritFunction;
+
+                        TheOptimizer.Close();
+                    }
+                    else
+                    {
+                        // Retrieve the MF value
+                        curMF = TheSystemCopy.MFE.CalculateMeritFunction();
+                    }
+                    
+                    // If the MF value is zero, assume the MF couldn't be calculated (error) and ignore this combination
+                    if (curMF == 0)
+                    {
+                        continue;
+                    }
 
 
 
 
+
+                    for (int zz = 0; zz < matches; zz++)
+                    {
+                        if (bestCombinations[zz].Lenses[0].Vendor != "")
+                        {
+                            debugStr += bestCombinations[zz].Lenses[0].Name + " " + bestCombinations[zz].Lenses[1].Name + " " + bestCombinations[zz].Lenses[2].Name + "\r\n";
+                        }
+                        else
+                        {
+                            debugStr += "Empty array\r\n";
+                        }
+                    }
+                    debugStr += "\r\n";
+
+
+
+
+
+                    isBestCombination(TheSystemCopy, saveBest, bestPath, bestCombinations, catalogLensArray, curMF);
+
+                    // Load the copy of the original system
+                    TheSystemCopy.LoadFile(tempPath, false);
+                }
+            }
+
+            // Enable/disable buttons
+            btnLaunch.Enabled = true;
+            btnCancel.Enabled = true;
+            btnTerminate.Enabled = false;
+
+            // Delete temporary files
+            File.Delete(tempPath);
+            File.Delete(tempPath.Replace(".ZMX", ".ZDA"));
+            File.Delete(mfPath);
 
             // Path to text-file result
             string fileFullPath = TheSystem.SystemFile;
@@ -787,15 +972,15 @@ namespace Reverse_SLM
             else
             {
                 string lastVendor = vendors.Last();
-                foreach(string vendor in vendors)
+                foreach(string vendorDisplay in vendors)
                 {
-                    if (vendor.Equals(lastVendor))
+                    if (vendorDisplay.Equals(lastVendor))
                     {
-                        line += vendor;
+                        line += vendorDisplay;
                     }
                     else
                     {
-                        line += vendor + ", ";
+                        line += vendorDisplay + ", ";
                     }
                 }
             }
@@ -852,24 +1037,93 @@ namespace Reverse_SLM
                 lines.Add(line);
             }
 
+            if (insertionError)
+            {
+                line = "> WARNING: One or more match failed to insert in the system ... \r\n";
+                lines.Add(line);
+            }
+
+            if (materialError)
+            {
+                line = "> WARNING: One or more match had a Material incompatible with the current wavelengths defined in the system ... \r\n";
+                lines.Add(line);
+            }
+
+            if (mfError)
+            {
+                line = "> WARNING: The Merit Function could not be evaluated for one or more match ... \r\n";
+                lines.Add(line);
+            }
+
             for (int ii = 0; ii < nominalLenses.Count; ii++)
             {
                 line = "Component " + (ii + 1).ToString();
                 line += " (Surfaces " + nominalLenses[ii].StartSurf.ToString() + "-";
                 line += (nominalLenses[ii].StartSurf + nominalLenses[ii].ElemCount).ToString();
-                line += ")\t\t\t\t\tMF Value\t\tMF Change\t\tIs Reversed?";
+                line += ")\t\t\t\tMF Value\t\tMF Change\t\tIs Reversed?";
                 lines.Add(line);
 
                 for (int jj = 0; jj < matches; jj++)
                 {
-                    line = jj.ToString() + ") " + bestMatches[ii, jj].Name + "(";
-                    line += bestMatches[ii, jj].Vendor + ")\t\t\t\t\t";
-                    line += bestMatches[ii, jj].MatchedMF + "\t";
-                    line += Math.Abs(nominalMF - bestMatches[ii, jj].MatchedMF);
-                    line += "\t" + bestMatches[ii, jj].IsReversed;
-                    lines.Add(line);
+                    if (bestMatches[ii, jj].Vendor != "")
+                    {
+                        line = (jj+1).ToString() + ") ";
+                        line += (bestMatches[ii, jj].Name + "(" + bestMatches[ii, jj].Vendor + ")").PadRight(50);
+                        line += "\t" + bestMatches[ii, jj].MatchedMF.ToString().PadRight(20) + "\t";
+                        line += Math.Abs(nominalMF - bestMatches[ii, jj].MatchedMF).ToString().PadRight(20);
+                        line += "\t" + bestMatches[ii, jj].IsReversed;
+                        lines.Add(line);
+                    }
+                }
+
+                lines.Add("");
+            }
+
+            if (combinations && nominalLenses.Count > 1)
+            {
+                line = "Best combinations\t\t\t\t\tMF Value";
+                lines.Add(line);
+
+                int combIndex = 0;
+                foreach (combination combinationResult in bestCombinations)
+                {
+                    if (combinationResult.CombinedMF < double.PositiveInfinity)
+                    {
+                        line = (combIndex + 1).ToString() + ")";
+
+                        int lensIndex = 0;
+                        foreach (catalogLens combLens in combinationResult.Lenses)
+                        {
+                            if (lensIndex == 0)
+                            {
+                                line += " " + (lensIndex+1).ToString() + ": " + combLens.Name;
+                                line += " (" + combLens.Vendor + ")";
+                            }
+                            else if (lensIndex == nominalLenses.Count - 1)
+                            {
+                                line += "   " + (lensIndex+1).ToString() + ": ";
+                                line += (combLens.Name + " (" + combLens.Vendor + ")").PadRight(50);
+                                line += combinationResult.CombinedMF.ToString();
+                            }
+                            else
+                            {
+                                line += "   " + (lensIndex+1).ToString() + ": " + combLens.Name;
+                                line += " (" + combLens.Vendor + ")";
+                            }
+
+                            line += "\r\n";
+
+                            lensIndex++;
+                        }
+
+                        lines.Add(line);
+                    }
+
+                    combIndex++;
                 }
             }
+
+            lines.Add(debugStr);
 
             // Write lines to text file
             File.WriteAllLines(logPath, lines.ToArray());
@@ -1002,12 +1256,69 @@ namespace Reverse_SLM
             }
         }
 
+        static void isBestCombination(IOpticalSystem TheSystemCopy, bool saveBest, string bestPath, combination[] bestCombinations, catalogLens[] combinationArray, double curMF)
+        {
+            int matches = bestCombinations.Length;
+
+            for (int ii = 0; ii < matches; ii++)
+            {
+                if (curMF < bestCombinations[ii].CombinedMF)
+                {
+                    // Save if best
+                    if (ii == 0 && saveBest)
+                    {
+                        TheSystemCopy.SaveAs(bestPath);
+                    }
+
+                    // Offset previous results
+                    for (int jj = matches - 1; jj - ii > 0; jj--)
+                    {
+                        bestCombinations[jj] = bestCombinations[jj - 1];
+                    }
+
+                    // Save new match as best
+                    for (int jj = 0; jj < bestCombinations[ii].LenCount; jj++)
+                    {
+                        bestCombinations[ii].Lenses[jj] = combinationArray[jj];
+                    }
+                    bestCombinations[ii].CombinedMF = curMF;
+
+                    break;
+                }
+            }
+        }
+
         private void btnTerminate_Click(object sender, EventArgs e)
         {
-            this.Terminate = true;
+            // TO DO
         }
     }
 
+    public class combination
+    {
+        public combination(int lenCount, catalogLens[] lenses, double combinedMF)
+        {
+            LenCount = lenCount;
+            if (lenses == null)
+            {
+                Lenses = new catalogLens[lenCount];
+                for (int ii = 0; ii < lenCount; ii++)
+                {
+                    Lenses[ii] = new catalogLens(-1, -1, false, -1.0, "", "");
+                }
+            }
+            else
+            {
+                Lenses = lenses;
+            }
+            CombinedMF = combinedMF;
+        }
+
+        public int LenCount;
+        public catalogLens[] Lenses;
+        public double CombinedMF;
+    }
+    
     public class catalogLens
     {
         public catalogLens(int lensID, int matchID, bool isReserved, double matchedMF, string name, string vendor)
