@@ -895,11 +895,6 @@ namespace Reverse_SLM
                 }
             }
 
-            // Update progress
-            tempMess = "Saving results ...";
-            TheApplication.ProgressMessage = tempMess;
-
-
             // Enable/disable buttons
             btnLaunch.Enabled = true;
             btnCancel.Enabled = true;
