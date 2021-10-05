@@ -888,33 +888,17 @@ namespace Reverse_SLM
                         continue;
                     }
 
-
-
-
-
-                    for (int zz = 0; zz < matches; zz++)
-                    {
-                        if (bestCombinations[zz].Lenses[0].Vendor != "")
-                        {
-                            debugStr += bestCombinations[zz].Lenses[0].Name + " " + bestCombinations[zz].Lenses[1].Name + " " + bestCombinations[zz].Lenses[2].Name + "\r\n";
-                        }
-                        else
-                        {
-                            debugStr += "Empty array\r\n";
-                        }
-                    }
-                    debugStr += "\r\n";
-
-
-
-
-
                     isBestCombination(TheSystemCopy, saveBest, bestPath, bestCombinations, catalogLensArray, curMF);
 
                     // Load the copy of the original system
                     TheSystemCopy.LoadFile(tempPath, false);
                 }
             }
+
+            // Update progress
+            tempMess = "Saving results ...";
+            TheApplication.ProgressMessage = tempMess;
+
 
             // Enable/disable buttons
             btnLaunch.Enabled = true;
@@ -939,11 +923,11 @@ namespace Reverse_SLM
             // Header
             line = "Reverse Stock Lens Matching Results\r\n";
             lines.Add(line);
-            line = "File: " + TheSystem.SystemFile;
+            line = "File:".PadRight(10) + TheSystem.SystemFile;
             lines.Add(line);
-            line = "Title: " + TheSystem.SystemData.TitleNotes.Title;
+            line = "Title:".PadRight(10) + TheSystem.SystemData.TitleNotes.Title;
             lines.Add(line);
-            line = "Date: " + DateTime.Now + "\r\n\r\n";
+            line = "Date:".PadRight(10) + DateTime.Now + "\r\n\r\n";
             lines.Add(line);
             line = "All stock lens data is provided by the vendor.";
             lines.Add(line);
@@ -956,15 +940,15 @@ namespace Reverse_SLM
             switch (surfaceSelection)
             {
                 case ALL:
-                    line = "Surfaces:\t\tAll";
+                    line = "Surfaces:".PadRight(22) + "All";
                     break;
                 case VARIABLE:
-                    line = "Surfaces:\t\tVariables";
+                    line = "Surfaces:".PadRight(22) + "Variables";
                     break;
             }
             lines.Add(line);
 
-            line = "Vendors:\t\t";
+            line = "Vendors:".PadRight(22);
             if (cbxVendors.Checked)
             {
                 line += "All";
@@ -986,20 +970,20 @@ namespace Reverse_SLM
             }
             lines.Add(line);
 
-            line = "Show Matches:\t\t" + matches.ToString();
+            line = "Show Matches:".PadRight(22) + matches.ToString();
             lines.Add(line);
-            line = "EFL Tolerance (%):\t" + eflTolerance.ToString();
+            line = "EFL Tolerance (%):".PadRight(22) + eflTolerance.ToString();
             lines.Add(line);
-            line = "EPD Tolerance (%):\t" + epdTolerance.ToString();
+            line = "EPD Tolerance (%):".PadRight(22) + epdTolerance.ToString();
             lines.Add(line);
-            line = "Nominal Criterion:\t" + nominalMF + "\r\n";
+            line = "Nominal Criterion:".PadRight(22) + nominalMF + "\r\n";
             lines.Add(line);
 
-            line = "Air Thickness Compensation:\t" + airCompensation.ToString();
+            line = "Air Thickness Compensation:".PadRight(31) + airCompensation.ToString();
             lines.Add(line);
             if (airCompensation)
             {
-                line = "Optimization Cycles:\t\t";
+                line = "Optimization Cycles:".PadRight(31);
                 switch (optimizationCycles)
                 {
                     case 0:
@@ -1020,9 +1004,9 @@ namespace Reverse_SLM
                 }
                 lines.Add(line);
             }
-            line = "Save Best:\t\t\t" + saveBest.ToString();
+            line = "Save Best:".PadRight(31) + saveBest.ToString();
             lines.Add(line);
-            line = "Both orientations:\t\t" + reverseElements.ToString() + "\r\n";
+            line = "Both orientations:".PadRight(31) + reverseElements.ToString() + "\r\n";
             lines.Add(line);
 
             // Results
@@ -1059,8 +1043,9 @@ namespace Reverse_SLM
             {
                 line = "Component " + (ii + 1).ToString();
                 line += " (Surfaces " + nominalLenses[ii].StartSurf.ToString() + "-";
-                line += (nominalLenses[ii].StartSurf + nominalLenses[ii].ElemCount).ToString();
-                line += ")\t\t\t\tMF Value\t\tMF Change\t\tIs Reversed?";
+                line += (nominalLenses[ii].StartSurf + nominalLenses[ii].ElemCount).ToString() + ")";
+                line = line.PadRight(56);
+                line += "MF Value".PadRight(24) + "MF Change".PadRight(24) + "Is Reversed?";
                 lines.Add(line);
 
                 for (int jj = 0; jj < matches; jj++)
@@ -1069,9 +1054,9 @@ namespace Reverse_SLM
                     {
                         line = (jj+1).ToString() + ") ";
                         line += (bestMatches[ii, jj].Name + "(" + bestMatches[ii, jj].Vendor + ")").PadRight(50);
-                        line += "\t" + bestMatches[ii, jj].MatchedMF.ToString().PadRight(20) + "\t";
-                        line += Math.Abs(nominalMF - bestMatches[ii, jj].MatchedMF).ToString().PadRight(20);
-                        line += "\t" + bestMatches[ii, jj].IsReversed;
+                        line += "\t" + bestMatches[ii, jj].MatchedMF.ToString().PadRight(24) + "";
+                        line += Math.Abs(nominalMF - bestMatches[ii, jj].MatchedMF).ToString().PadRight(24);
+                        line += bestMatches[ii, jj].IsReversed;
                         lines.Add(line);
                     }
                 }
@@ -1127,6 +1112,10 @@ namespace Reverse_SLM
 
             // Write lines to text file
             File.WriteAllLines(logPath, lines.ToArray());
+
+            // Update progress
+            tempMess = "Matching Complete";
+            TheApplication.ProgressMessage = tempMess;
         }
 
         static public List<int> varAirThicknesses(ILensDataEditor TheLDE, int lastSurf)
@@ -1273,7 +1262,12 @@ namespace Reverse_SLM
                     // Offset previous results
                     for (int jj = matches - 1; jj - ii > 0; jj--)
                     {
-                        bestCombinations[jj] = bestCombinations[jj - 1];
+                        for (int kk = 0; kk < bestCombinations[ii].LenCount; kk++)
+                        {
+                            bestCombinations[jj].Lenses[kk] = bestCombinations[jj - 1].Lenses[kk];
+                        }
+
+                        bestCombinations[jj].CombinedMF = bestCombinations[jj - 1].CombinedMF;
                     }
 
                     // Save new match as best
