@@ -252,7 +252,7 @@ namespace Reverse_SLM
             this.btnLaunch.Location = new System.Drawing.Point(32, 882);
             this.btnLaunch.Name = "btnLaunch";
             this.btnLaunch.Size = new System.Drawing.Size(223, 62);
-            this.btnLaunch.TabIndex = 18;
+            this.btnLaunch.TabIndex = 0;
             this.btnLaunch.Text = "Ok";
             this.btnLaunch.UseVisualStyleBackColor = true;
             this.btnLaunch.Click += new System.EventHandler(this.btnLaunch_Click);
@@ -276,7 +276,6 @@ namespace Reverse_SLM
             this.btnTerminate.TabIndex = 20;
             this.btnTerminate.Text = "Terminate";
             this.btnTerminate.UseVisualStyleBackColor = true;
-            this.btnTerminate.Visible = false;
             this.btnTerminate.Click += new System.EventHandler(this.btnTerminate_Click);
             // 
             // Settings

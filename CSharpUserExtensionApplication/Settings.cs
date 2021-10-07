@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ZOSAPI;
 using ZOSAPI.Editors;
@@ -52,6 +54,8 @@ namespace Reverse_SLM
         public ZOSAPI_Connection TheConnection;
         public IZOSAPI_Application TheApplication;
         public IOpticalSystem TheSystem;
+
+        CancellationTokenSource _tokenSource = null;
 
         private void cbxVendors_CheckedChanged(object sender, EventArgs e)
         {
@@ -172,13 +176,62 @@ namespace Reverse_SLM
             this.Close();
         }
 
-        private void btnLaunch_Click(object sender, EventArgs e)
+        private async void btnLaunch_Click(object sender, EventArgs e)
         {
-            // Enable/disable buttons
+            // Enable/disable
+            rbtnSurfacesAll.Enabled = false;
+            rbtnSurfacesVariable.Enabled = false;
+            cbxVendors.Enabled = false;
+            lbxVendors.Enabled = false;
+            numMatches.Enabled = false;
+            tbxEFL.Enabled = false;
+            tbxEPD.Enabled = false;
+            cbxAirThicknessCompensation.Enabled = false;
+            comboCycles.Enabled = false;
+            cbxSaveBest.Enabled = false;
+            cbxReverse.Enabled = false;
             btnLaunch.Enabled = false;
             btnCancel.Enabled = false;
             btnTerminate.Enabled = true;
+            btnTerminate.Focus();
 
+            _tokenSource = new CancellationTokenSource();
+            var token = _tokenSource.Token;
+
+            try
+            {
+                await Task.Run(() => launchMatching(token));
+            }
+            catch (OperationCanceledException)
+            {
+                TheApplication.ProgressPercent = 0;
+                TheApplication.ProgressMessage = "Matching cancelled";
+            }
+            finally
+            {
+                _tokenSource.Dispose();
+            }
+
+            // Enable/disable buttons
+            rbtnSurfacesAll.Enabled = true;
+            rbtnSurfacesVariable.Enabled = true;
+            cbxVendors.Enabled = true;
+            lbxVendors.Enabled = true;
+            numMatches.Enabled = true;
+            tbxEFL.Enabled = true;
+            tbxEPD.Enabled = true;
+            cbxAirThicknessCompensation.Enabled = true;
+            comboCycles.Enabled = true;
+            cbxSaveBest.Enabled = true;
+            cbxReverse.Enabled = true;
+            btnLaunch.Enabled = true;
+            btnLaunch.Focus();
+            btnCancel.Enabled = true;
+            btnTerminate.Enabled = false;
+        }
+
+        public void launchMatching(CancellationToken token)
+        {
             // Update progress
             TheApplication.ProgressPercent = 0;
             TheApplication.ProgressMessage = "Reading settings ...";
@@ -351,6 +404,11 @@ namespace Reverse_SLM
             // Loop over the system surfaces to find nominal lenses
             for (int surfID = firstSurf; surfID < lastSurf; surfID++)
             {
+                if (token.IsCancellationRequested)
+                {
+                    token.ThrowIfCancellationRequested();
+                }
+
                 // Retrieve current surface
                 ILDERow curSurf = TheLDE.GetSurfaceAt(surfID);
 
@@ -430,7 +488,7 @@ namespace Reverse_SLM
                         }
 
                         // Retrieve effective focal length
-                        EFL = TheSystem.MFE.GetOperandValue(ZOSAPI.Editors.MFE.MeritOperandType.EFLX, 
+                        EFL = TheSystem.MFE.GetOperandValue(ZOSAPI.Editors.MFE.MeritOperandType.EFLX,
                             lenStart, surfID, 0, 0, 0, 0, 0, 0);
 
                         // Update list of lenses
@@ -529,6 +587,9 @@ namespace Reverse_SLM
             // Array of best matches for each nominal lens
             catalogLens[,] bestMatches = new catalogLens[nominalLenses.Count, matches];
 
+            // Update progress
+            TheApplication.ProgressPercent = 10;
+
             // Loop over the lenses to be matched
             for (int nominalLensID = 0; nominalLensID < nominalLenses.Count; nominalLensID++)
             {
@@ -570,6 +631,11 @@ namespace Reverse_SLM
                     // Loop over the matches
                     for (int matchID = 0; matchID < vendorMatches; matchID++)
                     {
+                        if (token.IsCancellationRequested)
+                        {
+                            token.ThrowIfCancellationRequested();
+                        }
+
                         // Indicator to compare the reversed-element MF value
                         reverseMF = double.PositiveInfinity;
 
@@ -625,6 +691,10 @@ namespace Reverse_SLM
                         TheSystemCopy.MFE.LoadMeritFunction(mfPath);
 
                         // Update progress
+                        if (vendors.Length > 0 && vendorMatches > 1)
+                        {
+                            TheApplication.ProgressPercent = 10.0 + nominalLensID * 50.0 / nominalLenses.Count + vendorID * 50.0 / nominalLenses.Count / vendors.Length + matchID / (vendorMatches - 1.0) * 50.0 / nominalLenses.Count / vendors.Length;
+                        }
                         tempMess = "Evaluating: Lens " + (nominalLensID + 1).ToString() + "/" + nominalLenses.Count.ToString();
                         tempMess += " | Vendor " + (vendorID + 1).ToString() + "/" + (vendors.Length).ToString();
                         tempMess += " | Match " + (matchID + 1).ToString() + "/" + (vendorMatches).ToString();
@@ -749,7 +819,7 @@ namespace Reverse_SLM
                 {
                     bestCombinations[ii] = new combination(nominalLenses.Count, null, double.PositiveInfinity);
                 }
-                
+
                 // Enumerate combinations in base "matches". For example, if we show 5 matches and we have
                 // two lenses, that is 5^2 = 25 combinations. If we enumerate those combinations in base 5
                 // we get 00, 01, 02, 03, 04, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24, 30, 31, 32, 33, 34,
@@ -757,7 +827,13 @@ namespace Reverse_SLM
                 // digit is the best match of the second lens.
                 for (int ii = 0; ii < (int)Math.Pow(matches, nominalLenses.Count); ii++)
                 {
+                    if (token.IsCancellationRequested)
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
+
                     // Update progress
+                    TheApplication.ProgressPercent = 50.0 + ii / (Math.Pow(matches, nominalLenses.Count) - 1) * 50.0;
                     tempMess = "Evaluating: Combination " + (ii + 1).ToString() + "/" + ((int)Math.Pow(matches, nominalLenses.Count)).ToString();
                     TheApplication.ProgressMessage = tempMess;
 
@@ -785,7 +861,7 @@ namespace Reverse_SLM
 
                     nominalIndex = 0;
 
-                    foreach(int index in indices)
+                    foreach (int index in indices)
                     {
                         // Nominal lens properties
                         elemCount = nominalLenses[nominalIndex].ElemCount;
@@ -881,7 +957,7 @@ namespace Reverse_SLM
                         // Retrieve the MF value
                         curMF = TheSystemCopy.MFE.CalculateMeritFunction();
                     }
-                    
+
                     // If the MF value is zero, assume the MF couldn't be calculated (error) and ignore this combination
                     if (curMF == 0)
                     {
@@ -894,11 +970,6 @@ namespace Reverse_SLM
                     TheSystemCopy.LoadFile(tempPath, false);
                 }
             }
-
-            // Enable/disable buttons
-            btnLaunch.Enabled = true;
-            btnCancel.Enabled = true;
-            btnTerminate.Enabled = false;
 
             // Delete temporary files
             File.Delete(tempPath);
@@ -951,7 +1022,7 @@ namespace Reverse_SLM
             else
             {
                 string lastVendor = vendors.Last();
-                foreach(string vendorDisplay in vendors)
+                foreach (string vendorDisplay in vendors)
                 {
                     if (vendorDisplay.Equals(lastVendor))
                     {
@@ -1047,7 +1118,7 @@ namespace Reverse_SLM
                 {
                     if (bestMatches[ii, jj].Vendor != "")
                     {
-                        line = (jj+1).ToString() + ") ";
+                        line = (jj + 1).ToString() + ") ";
                         line += (bestMatches[ii, jj].Name + "(" + bestMatches[ii, jj].Vendor + ")").PadRight(50);
                         line += "\t" + bestMatches[ii, jj].MatchedMF.ToString().PadRight(24) + "";
                         line += Math.Abs(nominalMF - bestMatches[ii, jj].MatchedMF).ToString().PadRight(24);
@@ -1076,18 +1147,18 @@ namespace Reverse_SLM
                         {
                             if (lensIndex == 0)
                             {
-                                line += " " + (lensIndex+1).ToString() + ": " + combLens.Name;
+                                line += " " + (lensIndex + 1).ToString() + ": " + combLens.Name;
                                 line += " (" + combLens.Vendor + ")";
                             }
                             else if (lensIndex == nominalLenses.Count - 1)
                             {
-                                line += "   " + (lensIndex+1).ToString() + ": ";
+                                line += "   " + (lensIndex + 1).ToString() + ": ";
                                 line += (combLens.Name + " (" + combLens.Vendor + ")").PadRight(50);
                                 line += combinationResult.CombinedMF.ToString();
                             }
                             else
                             {
-                                line += "   " + (lensIndex+1).ToString() + ": " + combLens.Name;
+                                line += "   " + (lensIndex + 1).ToString() + ": " + combLens.Name;
                                 line += " (" + combLens.Vendor + ")";
                             }
 
@@ -1109,6 +1180,7 @@ namespace Reverse_SLM
             File.WriteAllLines(logPath, lines.ToArray());
 
             // Update progress
+            TheApplication.ProgressPercent = 100;
             tempMess = "Matching Complete";
             TheApplication.ProgressMessage = tempMess;
         }
@@ -1279,7 +1351,8 @@ namespace Reverse_SLM
 
         private void btnTerminate_Click(object sender, EventArgs e)
         {
-            // TO DO
+            _tokenSource.Cancel();
+            btnTerminate.Enabled = false;
         }
     }
 
