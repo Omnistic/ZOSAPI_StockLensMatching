@@ -40,27 +40,21 @@ This might not work for every computer, and future releases of OpticStudio. If t
 3. Copy the generated executable to your **..\Documents\Zemax\ZOS-API\Extensions folder**
 
 ## 2. How to use
-I don't know yet how to make a settings window in the ZOS-API. Therefore, all the settings are in the file **Reverse_SLM_settings.txt**. There is nearly no error trapping, try to remember this when editing this settings file. Below the list of available settings, their range of values, and what their purpose is.
+This implementation of the SLM has a graphical user interface (GUI) with error handling to input the SLM settings in a similar fashion as the native SLM tool. The settings description is the same as for the native tool with some peculiarities described below.
 
-### Settings
-* Reverse = [True or False]: if True, try both orientation of a catalog lens for matching (keep the best orientation only). If False, only the default orientation is used
-* Variable = [True or False]: if True, only lenses with at least one variable radius are matched, the others are ignored. If False, all valid lenses are matched
-* Vendors = [ALL or VENDOR1, VENDOR2, ...]: only uses catalog lenses from the specified vendors (watch out for spelling mistakes...). ALL means all vendors
-* Matches = [UNSIGNED INTEGER]: the number of best matches to display for each lens, and each combination (if it applies)
-* EFL/EPD tolerance = [0.0 - 1.0]: is the +/- tolerance on EFL/EPD for corresponding catalog lenses. For example, if the nominal EFL is 100.0 mm, a tolerance of 0.1 will browse all catalog lenses with an EFL between 90.0, and 110.0 mm (I can't be sure if those exact values are included, those are the values I specify as MinEFL, MaxEFL, MinEPD, and MaxEPD in the lens catalog tool of the ZOS-API). This is not given in % as in OpticStudio. Additionally, I don't know what the nominal EPD is for a given lens in OpticStudio. I have taken it as twice the maximum clear semi-diameter for a given element.
-* Air thickness compensation = [True or False]: if True, optimize the system using the current Merit Function, and only the present variable air thicknesses. Once again, there isn't much error trapping. If you don't have a Merit Function defined, the value of the Merit Function is always 0. The optimizer is DLS, and it uses the default number of core for the user's computer. If False, replace the catalog lenses without optimization.
-* Optimization cycles = [0 or 1 or 5 or 10 or 50]: 0 means the optimizer runs on the automatic number of cycles. 1, 5, 10 or 50 means the optimizer runs for the corresponding number of cycles. It differs from OpticStudio in the sense that the user cannot choose any integer cycles between 0 and 50. This is a limitation of the local optimizer tool in the ZOS-API
-* Save best = [True or False]: if True, saves the best combination, or match if it is a single element, to FILENAME_SLM_ZOSAPI.ZMX in the same folder as the lens file
+### Specific settings description
+* Try Both Orientation?: if checked, try both orientation of a catalog lens for matching (keeps the best orientation only). If unchecked, only the default orientation is used
+* Surfaces: if Variable, only lenses with at least one variable radius are matched, the others are ignored. If All, all valid lenses are matched
+* EFL/EPD Tolerance: I still don't know how the EPD is defined in catalog lenses. I have used twice the maximum clear semi-diameter for a given element.
+* Air Thickness Compensation?: The optimizer is DLS, and it uses the default number of core for the user's computer. If the Merit Function is 0.0, it is assumed that an error happened when calculating the Merit Function, and the result is ignored. It means legitimate results with a Merit Function of 0.0 are discarded (but I think they are extremely unlikely).
+* Save Best Combination?: if checked, saves the best combination or match if it is a single element, to FILENAME_RSLM.ZMX in the same folder as the lens file. I will try to update to the new .ZOS file format later.
 
-Once the settings have been modified, go to OpticStudio and run **Programing..User Extensions..ReverseSLM**.
-
-The results are saved in a file FILENAME_SLM_ZOSAPI_LOG.TXT in the same folder as the lens file.
+The results are saved in a file FILENAME_RSLM.TXT in the same folder as the lens file. [This User Analysis](https://github.com/Omnistic/ZOSAPI_DisplayText) can be used to view the text-file results directly in OpticStudio.
 
 ## 3. Limitations
 1. The maximum number of cemented elements that can currently be matched is three. The whole code is made such that it can handle quadruplets, and up to N elements really, but I only tested with doublets because there aren't many triplets, let alone quadruplets...
-2. The maximum number of lenses that can be matched in a single file is 255 although I never tried with that many (it will take a significant amount of time)
-3. I did not come across this issue in my testing, but I've seen it happen with the standard lens matching tool. An error can occur in the standard LSM tool where after a lens is inserted, the system fail to compute its MF value. If such an error occurs in the ZOS-API, I suspect it will behave like the glass catalog warning, and make the application freeze. **Update 2021/09/15:** This was false, when this happens, the returned MF value is simply zero, and no errors are thrown, and the application doesn't freeze. To account for those rather frequent cases, I'm ignoring the matched lenses that give a MF value of zero. It also means that if a matched lens would legitimately give a MF value of zero, it is ignored, but I think it is highly unlikely. 
-4. I did not characterized it yet, but the speed of this tool is significantly slower than the native SLM tool
+2. I'm ignoring the matched lenses that give a MF value of zero. It also means that if a matched lens would legitimately give a MF value of zero, it is ignored, but I think it is highly unlikely.
+3. I did not characterized it yet, but the speed of this tool is significantly slower than the native SLM tool
 
 ## 4. Examples
 In the following section, I'd like to present a series of examples and how they behave with the standard SLM, and the ZOS-API SLM tool.
