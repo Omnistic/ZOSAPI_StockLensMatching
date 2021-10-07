@@ -54,7 +54,8 @@ The results are saved in a file FILENAME_RSLM.TXT in the same folder as the lens
 ## 3. Limitations
 1. The maximum number of cemented elements that can currently be matched is three. The whole code is made such that it can handle quadruplets, and up to N elements really, but I only tested with doublets because there aren't many triplets, let alone quadruplets...
 2. I'm ignoring the matched lenses that give a MF value of zero. It also means that if a matched lens would legitimately give a MF value of zero, it is ignored, but I think it is highly unlikely.
-3. I did not characterized it yet, but the speed of this tool is significantly slower than the native SLM tool
+3. I did not characterized it yet, but the speed of this tool is significantly slower than the native SLM tool.
+4. The Terminate button in the Running Extension window doesn't work anymore. The user should use the Terminate button in the Reverse SLM window.
 
 ## 4. Examples
 In the following section, I'd like to present a series of examples and how they behave with the standard SLM, and the ZOS-API SLM tool.
