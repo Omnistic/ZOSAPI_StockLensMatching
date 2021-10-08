@@ -190,6 +190,7 @@ namespace Reverse_SLM
             comboCycles.Enabled = false;
             cbxSaveBest.Enabled = false;
             cbxReverse.Enabled = false;
+            cbxIgnoreElements.Enabled = false;
             btnLaunch.Enabled = false;
             btnCancel.Enabled = false;
             btnTerminate.Enabled = true;
@@ -224,6 +225,7 @@ namespace Reverse_SLM
             comboCycles.Enabled = true;
             cbxSaveBest.Enabled = true;
             cbxReverse.Enabled = true;
+            cbxIgnoreElements.Enabled = true;
             btnLaunch.Enabled = true;
             btnLaunch.Focus();
             btnCancel.Enabled = true;
@@ -275,7 +277,7 @@ namespace Reverse_SLM
             // Retrieve settings
             int surfaceSelection, matches, optimizationCycles, numWaves;
             double eflTolerance, epdTolerance, maxWave, minWave, curWave;
-            bool airCompensation, saveBest, reverseElements;
+            bool airCompensation, saveBest, reverseElements, ignoreElemCount;
             string bestPath;
             string[] vendors;
 
@@ -357,7 +359,7 @@ namespace Reverse_SLM
                 bestPath = TheSystem.SystemFile;
                 string directory = Path.GetDirectoryName(bestPath);
                 string bestName = Path.GetFileNameWithoutExtension(bestPath);
-                bestPath = Path.Combine(directory, bestName + "_RSLM.ZMX");
+                bestPath = Path.Combine(directory, bestName + "_RSLM.ZOS");
             }
             else
             {
@@ -367,6 +369,9 @@ namespace Reverse_SLM
 
             // Utilize element reversal?
             reverseElements = cbxReverse.Checked;
+
+            // Ignore number of elements when matching?
+            ignoreElemCount = cbxIgnoreElements.Checked;
 
             // Retrieve maximum, and minimum wavelengths (used later to check if a matched lens material is compatible)
             maxWave = double.NegativeInfinity;
@@ -547,7 +552,7 @@ namespace Reverse_SLM
             catalogLensArray = new catalogLens[nominalLenses.Count];
 
             // Create a temporary file to evaluate the matches
-            string[] tempFolder = { dataDir, "DeleteMe.ZMX" };
+            string[] tempFolder = { dataDir, "DeleteMe.ZOS" };
             string tempPath = Path.Combine(tempFolder);
 
             // Get nominal MF
@@ -616,7 +621,15 @@ namespace Reverse_SLM
                     TheLensCatalog = TheSystemCopy.Tools.OpenLensCatalogs();
 
                     // Apply settings to catalog tool
-                    applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
+                    if (ignoreElemCount)
+                    {
+                        // If we ignore the number of elements
+                        applyCatalogSettings(TheLensCatalog, 0, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
+                    }
+                    else
+                    {
+                        applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
+                    }
 
                     // Run the lens catalog tool for the given vendor
                     TheLensCatalog.RunAndWaitForCompletion();
@@ -642,7 +655,15 @@ namespace Reverse_SLM
                         // Run the lens catalog once again and for every match (it needs to be closed for the optimization tool to be opened)
                         // Feature request: can we have a field to search for a specific lens by its name?
                         TheLensCatalog = TheSystemCopy.Tools.OpenLensCatalogs();
-                        applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
+                        if (ignoreElemCount)
+                        {
+                            // If we ignore the number of elements
+                            applyCatalogSettings(TheLensCatalog, 0, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
+                        }
+                        else
+                        {
+                            applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendors[vendorID]);
+                        }
                         TheLensCatalog.RunAndWaitForCompletion();
 
                         // Retrieve the corresponding matched lens
@@ -662,8 +683,8 @@ namespace Reverse_SLM
                         }
 
                         // Restore thickness
-                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness = thicknessAfter;
-                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.SetSolveData(ThicknessSolve);
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + MatchedLens.NumberOfElements).Thickness = thicknessAfter;
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + MatchedLens.NumberOfElements).ThicknessCell.SetSolveData(ThicknessSolve);
 
                         // Close the lens catalog tool
                         TheLensCatalog.Close();
@@ -698,6 +719,7 @@ namespace Reverse_SLM
                         tempMess = "Evaluating: Lens " + (nominalLensID + 1).ToString() + "/" + nominalLenses.Count.ToString();
                         tempMess += " | Vendor " + (vendorID + 1).ToString() + "/" + (vendors.Length).ToString();
                         tempMess += " | Match " + (matchID + 1).ToString() + "/" + (vendorMatches).ToString();
+                        tempMess = tempMess.PadRight(60);
                         TheApplication.ProgressMessage = tempMess;
 
                         // Report insertion and material errors
@@ -882,7 +904,16 @@ namespace Reverse_SLM
                         }
 
                         // Apply catalog settings to retrieve the corresponding best match
-                        applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendor);
+                        if (ignoreElemCount)
+                        {
+                            // If we ignore the number of elements
+                            applyCatalogSettings(TheLensCatalog, 0, EFL, EPD, eflTolerance, epdTolerance, vendor);
+                        }
+                        else
+                        {
+                            applyCatalogSettings(TheLensCatalog, elemCount, EFL, EPD, eflTolerance, epdTolerance, vendor);
+                        }
+
                         TheLensCatalog.RunAndWaitForCompletion();
 
                         // Retrieve the corresponding matched lens
@@ -906,8 +937,8 @@ namespace Reverse_SLM
                         }
 
                         // Restore thickness
-                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness = thicknessAfter;
-                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.SetSolveData(ThicknessSolve);
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + MatchedLens.NumberOfElements).Thickness = thicknessAfter;
+                        TheSystemCopy.LDE.GetSurfaceAt(lenStart + MatchedLens.NumberOfElements).ThicknessCell.SetSolveData(ThicknessSolve);
 
                         nominalIndex++;
                     }
@@ -973,7 +1004,8 @@ namespace Reverse_SLM
 
             // Delete temporary files
             File.Delete(tempPath);
-            File.Delete(tempPath.Replace(".ZMX", ".ZDA"));
+            File.Delete(tempPath.Replace(".ZOS", ".ZMX"));
+            File.Delete(tempPath.Replace(".ZOS", ".ZDA"));
             File.Delete(mfPath);
 
             // Path to text-file result

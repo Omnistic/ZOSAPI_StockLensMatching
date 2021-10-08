@@ -49,6 +49,7 @@ namespace Reverse_SLM
             this.btnLaunch = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnTerminate = new System.Windows.Forms.Button();
+            this.cbxIgnoreElements = new System.Windows.Forms.CheckBox();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numMatches)).BeginInit();
             this.SuspendLayout();
@@ -56,9 +57,10 @@ namespace Reverse_SLM
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(27, 29);
+            this.label1.Location = new System.Drawing.Point(12, 13);
+            this.label1.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(113, 29);
+            this.label1.Size = new System.Drawing.Size(52, 13);
             this.label1.TabIndex = 2;
             this.label1.Text = "Surfaces:";
             // 
@@ -66,22 +68,23 @@ namespace Reverse_SLM
             // 
             this.lbxVendors.Enabled = false;
             this.lbxVendors.FormattingEnabled = true;
-            this.lbxVendors.ItemHeight = 29;
             this.lbxVendors.Items.AddRange(new object[] {
             "Item 1",
             "Item 2"});
-            this.lbxVendors.Location = new System.Drawing.Point(288, 149);
+            this.lbxVendors.Location = new System.Drawing.Point(123, 67);
+            this.lbxVendors.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.lbxVendors.Name = "lbxVendors";
             this.lbxVendors.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
-            this.lbxVendors.Size = new System.Drawing.Size(480, 236);
+            this.lbxVendors.Size = new System.Drawing.Size(208, 108);
             this.lbxVendors.TabIndex = 3;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(27, 90);
+            this.label2.Location = new System.Drawing.Point(12, 40);
+            this.label2.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(125, 29);
+            this.label2.Size = new System.Drawing.Size(55, 13);
             this.label2.TabIndex = 4;
             this.label2.Text = "Vendor(s):";
             // 
@@ -90,9 +93,10 @@ namespace Reverse_SLM
             this.cbxVendors.AutoSize = true;
             this.cbxVendors.Checked = true;
             this.cbxVendors.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.cbxVendors.Location = new System.Drawing.Point(288, 89);
+            this.cbxVendors.Location = new System.Drawing.Point(123, 40);
+            this.cbxVendors.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.cbxVendors.Name = "cbxVendors";
-            this.cbxVendors.Size = new System.Drawing.Size(84, 33);
+            this.cbxVendors.Size = new System.Drawing.Size(43, 17);
             this.cbxVendors.TabIndex = 5;
             this.cbxVendors.Text = "All?";
             this.cbxVendors.UseVisualStyleBackColor = true;
@@ -101,9 +105,10 @@ namespace Reverse_SLM
             // rbtnSurfacesVariable
             // 
             this.rbtnSurfacesVariable.AutoSize = true;
-            this.rbtnSurfacesVariable.Location = new System.Drawing.Point(121, 3);
+            this.rbtnSurfacesVariable.Location = new System.Drawing.Point(52, 1);
+            this.rbtnSurfacesVariable.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.rbtnSurfacesVariable.Name = "rbtnSurfacesVariable";
-            this.rbtnSurfacesVariable.Size = new System.Drawing.Size(133, 33);
+            this.rbtnSurfacesVariable.Size = new System.Drawing.Size(63, 17);
             this.rbtnSurfacesVariable.TabIndex = 0;
             this.rbtnSurfacesVariable.Text = "Variable";
             this.rbtnSurfacesVariable.UseVisualStyleBackColor = true;
@@ -112,9 +117,10 @@ namespace Reverse_SLM
             // 
             this.rbtnSurfacesAll.AutoSize = true;
             this.rbtnSurfacesAll.Checked = true;
-            this.rbtnSurfacesAll.Location = new System.Drawing.Point(3, 3);
+            this.rbtnSurfacesAll.Location = new System.Drawing.Point(1, 1);
+            this.rbtnSurfacesAll.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.rbtnSurfacesAll.Name = "rbtnSurfacesAll";
-            this.rbtnSurfacesAll.Size = new System.Drawing.Size(71, 33);
+            this.rbtnSurfacesAll.Size = new System.Drawing.Size(36, 17);
             this.rbtnSurfacesAll.TabIndex = 7;
             this.rbtnSurfacesAll.TabStop = true;
             this.rbtnSurfacesAll.Text = "All";
@@ -124,23 +130,26 @@ namespace Reverse_SLM
             // 
             this.panel1.Controls.Add(this.rbtnSurfacesVariable);
             this.panel1.Controls.Add(this.rbtnSurfacesAll);
-            this.panel1.Location = new System.Drawing.Point(288, 24);
+            this.panel1.Location = new System.Drawing.Point(123, 11);
+            this.panel1.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(310, 38);
+            this.panel1.Size = new System.Drawing.Size(133, 17);
             this.panel1.TabIndex = 7;
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(27, 423);
+            this.label3.Location = new System.Drawing.Point(12, 190);
+            this.label3.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(176, 29);
+            this.label3.Size = new System.Drawing.Size(80, 13);
             this.label3.TabIndex = 8;
             this.label3.Text = "Show matches:";
             // 
             // numMatches
             // 
-            this.numMatches.Location = new System.Drawing.Point(288, 421);
+            this.numMatches.Location = new System.Drawing.Point(123, 189);
+            this.numMatches.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.numMatches.Maximum = new decimal(new int[] {
             50,
             0,
@@ -152,7 +161,7 @@ namespace Reverse_SLM
             0,
             0});
             this.numMatches.Name = "numMatches";
-            this.numMatches.Size = new System.Drawing.Size(268, 35);
+            this.numMatches.Size = new System.Drawing.Size(115, 20);
             this.numMatches.TabIndex = 9;
             this.numMatches.Value = new decimal(new int[] {
             5,
@@ -165,27 +174,30 @@ namespace Reverse_SLM
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(27, 489);
+            this.label4.Location = new System.Drawing.Point(12, 219);
+            this.label4.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(223, 29);
+            this.label4.Size = new System.Drawing.Size(97, 13);
             this.label4.TabIndex = 10;
             this.label4.Text = "EFL Tolerance (%);";
             // 
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(27, 549);
+            this.label5.Location = new System.Drawing.Point(12, 246);
+            this.label5.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(228, 29);
+            this.label5.Size = new System.Drawing.Size(100, 13);
             this.label5.TabIndex = 11;
             this.label5.Text = "EPD Tolerance (%):";
             // 
             // tbxEFL
             // 
-            this.tbxEFL.Location = new System.Drawing.Point(288, 486);
+            this.tbxEFL.Location = new System.Drawing.Point(123, 218);
+            this.tbxEFL.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.tbxEFL.MaxLength = 4;
             this.tbxEFL.Name = "tbxEFL";
-            this.tbxEFL.Size = new System.Drawing.Size(268, 35);
+            this.tbxEFL.Size = new System.Drawing.Size(117, 20);
             this.tbxEFL.TabIndex = 12;
             this.tbxEFL.Text = "25";
             this.tbxEFL.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.tolerance_char_validation);
@@ -193,9 +205,10 @@ namespace Reverse_SLM
             // 
             // tbxEPD
             // 
-            this.tbxEPD.Location = new System.Drawing.Point(288, 546);
+            this.tbxEPD.Location = new System.Drawing.Point(123, 245);
+            this.tbxEPD.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.tbxEPD.Name = "tbxEPD";
-            this.tbxEPD.Size = new System.Drawing.Size(268, 35);
+            this.tbxEPD.Size = new System.Drawing.Size(117, 20);
             this.tbxEPD.TabIndex = 13;
             this.tbxEPD.Text = "25";
             this.tbxEPD.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.tolerance_char_validation);
@@ -204,9 +217,10 @@ namespace Reverse_SLM
             // cbxAirThicknessCompensation
             // 
             this.cbxAirThicknessCompensation.AutoSize = true;
-            this.cbxAirThicknessCompensation.Location = new System.Drawing.Point(288, 614);
+            this.cbxAirThicknessCompensation.Location = new System.Drawing.Point(123, 275);
+            this.cbxAirThicknessCompensation.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.cbxAirThicknessCompensation.Name = "cbxAirThicknessCompensation";
-            this.cbxAirThicknessCompensation.Size = new System.Drawing.Size(364, 33);
+            this.cbxAirThicknessCompensation.Size = new System.Drawing.Size(166, 17);
             this.cbxAirThicknessCompensation.TabIndex = 14;
             this.cbxAirThicknessCompensation.Text = "Air Thickness Compensation?";
             this.cbxAirThicknessCompensation.UseVisualStyleBackColor = true;
@@ -215,9 +229,10 @@ namespace Reverse_SLM
             // cbxSaveBest
             // 
             this.cbxSaveBest.AutoSize = true;
-            this.cbxSaveBest.Location = new System.Drawing.Point(288, 742);
+            this.cbxSaveBest.Location = new System.Drawing.Point(123, 333);
+            this.cbxSaveBest.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.cbxSaveBest.Name = "cbxSaveBest";
-            this.cbxSaveBest.Size = new System.Drawing.Size(307, 33);
+            this.cbxSaveBest.Size = new System.Drawing.Size(142, 17);
             this.cbxSaveBest.TabIndex = 15;
             this.cbxSaveBest.Text = "Save Best Combination?";
             this.cbxSaveBest.UseVisualStyleBackColor = true;
@@ -232,26 +247,29 @@ namespace Reverse_SLM
             "5",
             "10",
             "50"});
-            this.comboCycles.Location = new System.Drawing.Point(288, 671);
+            this.comboCycles.Location = new System.Drawing.Point(123, 301);
+            this.comboCycles.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.comboCycles.Name = "comboCycles";
-            this.comboCycles.Size = new System.Drawing.Size(268, 37);
+            this.comboCycles.Size = new System.Drawing.Size(117, 21);
             this.comboCycles.TabIndex = 16;
             // 
             // cbxReverse
             // 
             this.cbxReverse.AutoSize = true;
-            this.cbxReverse.Location = new System.Drawing.Point(288, 800);
+            this.cbxReverse.Location = new System.Drawing.Point(123, 359);
+            this.cbxReverse.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.cbxReverse.Name = "cbxReverse";
-            this.cbxReverse.Size = new System.Drawing.Size(276, 33);
+            this.cbxReverse.Size = new System.Drawing.Size(128, 17);
             this.cbxReverse.TabIndex = 17;
             this.cbxReverse.Text = "Try both orientations?";
             this.cbxReverse.UseVisualStyleBackColor = true;
             // 
             // btnLaunch
             // 
-            this.btnLaunch.Location = new System.Drawing.Point(32, 882);
+            this.btnLaunch.Location = new System.Drawing.Point(14, 417);
+            this.btnLaunch.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.btnLaunch.Name = "btnLaunch";
-            this.btnLaunch.Size = new System.Drawing.Size(223, 62);
+            this.btnLaunch.Size = new System.Drawing.Size(96, 28);
             this.btnLaunch.TabIndex = 0;
             this.btnLaunch.Text = "Ok";
             this.btnLaunch.UseVisualStyleBackColor = true;
@@ -259,9 +277,10 @@ namespace Reverse_SLM
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(288, 882);
+            this.btnCancel.Location = new System.Drawing.Point(123, 417);
+            this.btnCancel.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(223, 62);
+            this.btnCancel.Size = new System.Drawing.Size(96, 28);
             this.btnCancel.TabIndex = 19;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
@@ -270,19 +289,32 @@ namespace Reverse_SLM
             // btnTerminate
             // 
             this.btnTerminate.Enabled = false;
-            this.btnTerminate.Location = new System.Drawing.Point(545, 882);
+            this.btnTerminate.Location = new System.Drawing.Point(234, 417);
+            this.btnTerminate.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.btnTerminate.Name = "btnTerminate";
-            this.btnTerminate.Size = new System.Drawing.Size(223, 62);
+            this.btnTerminate.Size = new System.Drawing.Size(96, 28);
             this.btnTerminate.TabIndex = 20;
             this.btnTerminate.Text = "Terminate";
             this.btnTerminate.UseVisualStyleBackColor = true;
             this.btnTerminate.Click += new System.EventHandler(this.btnTerminate_Click);
             // 
+            // cbxIgnoreElements
+            // 
+            this.cbxIgnoreElements.AutoSize = true;
+            this.cbxIgnoreElements.Location = new System.Drawing.Point(123, 385);
+            this.cbxIgnoreElements.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
+            this.cbxIgnoreElements.Name = "cbxIgnoreElements";
+            this.cbxIgnoreElements.Size = new System.Drawing.Size(157, 17);
+            this.cbxIgnoreElements.TabIndex = 21;
+            this.cbxIgnoreElements.Text = "Ignore number of elements?";
+            this.cbxIgnoreElements.UseVisualStyleBackColor = true;
+            // 
             // Settings
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(14F, 29F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 984);
+            this.ClientSize = new System.Drawing.Size(345, 458);
+            this.Controls.Add(this.cbxIgnoreElements);
             this.Controls.Add(this.btnTerminate);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnLaunch);
@@ -301,6 +333,8 @@ namespace Reverse_SLM
             this.Controls.Add(this.label2);
             this.Controls.Add(this.lbxVendors);
             this.Controls.Add(this.label1);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.Margin = new System.Windows.Forms.Padding(1, 1, 1, 1);
             this.Name = "Settings";
             this.Text = "Reverse SLM";
             this.panel1.ResumeLayout(false);
@@ -332,5 +366,6 @@ namespace Reverse_SLM
         private System.Windows.Forms.Button btnLaunch;
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Button btnTerminate;
+        private System.Windows.Forms.CheckBox cbxIgnoreElements;
     }
 }
