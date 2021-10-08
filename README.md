@@ -1,5 +1,5 @@
 # ZOS-API Implementation of the Stock Lens Matching tool with graphical user interface
-* Current version 0.9
+* Current version 0.9a
 * Developed with OpticStudio (ZEMAX) 21.3
 * Programing language C#
 * User-extension
@@ -44,6 +44,7 @@ This implementation of the SLM has a graphical user interface (GUI) with error h
 
 ### Specific settings description
 * Try Both Orientation?: if checked, try both orientation of a catalog lens for matching (keeps the best orientation only). If unchecked, only the default orientation is used
+* Ignore number of elements?: if checked, each lens will be matched with catalog lenses of any number of elements. **Currently, this feature might break the Merit Function if it has surface-dependent operands, always double-check the results!**
 * Surfaces: if Variable, only lenses with at least one variable radius are matched, the others are ignored. If All, all valid lenses are matched
 * EFL/EPD Tolerance: I still don't know how the EPD is defined in catalog lenses. I have used twice the maximum clear semi-diameter for a given element.
 * Air Thickness Compensation?: The optimizer is DLS, and it uses the default number of core for the user's computer. If the Merit Function is 0.0, it is assumed that an error happened when calculating the Merit Function, and the result is ignored. It means legitimate results with a Merit Function of 0.0 are discarded (but I think they are extremely unlikely).
@@ -56,6 +57,7 @@ The results are saved in a file FILENAME_RSLM.TXT in the same folder as the lens
 2. I'm ignoring the matched lenses that give a MF value of zero. It also means that if a matched lens would legitimately give a MF value of zero, it is ignored, but I think it is highly unlikely.
 3. I did not characterized it yet, but the speed of this tool is significantly slower than the native SLM tool.
 4. The Terminate button in the Running Extension window doesn't work anymore. The user should use the Terminate button in the Reverse SLM window.
+5. Matching lenses with any number of elements might break the Merit Funciton if it contains surface-dependent operands. This is because, currently, the algorithm doesn't keep track of such specific operands, it only loads the Merit Function as it was defined in the nominal file!
 
 ## 4. Examples
 In the following section, I'd like to present a series of examples and how they behave with the standard SLM, and the ZOS-API SLM tool.
