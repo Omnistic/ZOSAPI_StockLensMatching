@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using ZOSAPI;
 using ZOSAPI.Editors;
 using ZOSAPI.Editors.LDE;
+using ZOSAPI.Editors.MFE;
 using ZOSAPI.Tools;
 using ZOSAPI.Tools.General;
 using ZOSAPI.Tools.Optimization;
@@ -563,6 +564,9 @@ namespace Reverse_SLM
 
             // Save the system
             TheSystem.Save();
+
+            // Remove potential DMFS from Merit Function
+            removeOperand(TheSystem.MFE, ZOSAPI.Editors.MFE.MeritOperandType.DMFS);
 
             // Save the MF
             mfPath = Path.Combine(dataDir, "DeleteMe.MF");
@@ -1215,6 +1219,20 @@ namespace Reverse_SLM
             TheApplication.ProgressPercent = 100;
             tempMess = "Matching Complete";
             TheApplication.ProgressMessage = tempMess;
+        }
+
+        static void removeOperand(IMeritFunctionEditor MFE, ZOSAPI.Editors.MFE.MeritOperandType OpType)
+        {
+            int numOp = MFE.NumberOfOperands + 1;
+
+            for (int ii = 1; ii < numOp; ii++)
+            {
+                if (MFE.GetOperandAt(ii).Type == OpType)
+                {
+                    MFE.RemoveOperandAt(ii);
+                    numOp--;
+                }
+            }
         }
 
         static public List<int> varAirThicknesses(ILensDataEditor TheLDE, int lastSurf)
