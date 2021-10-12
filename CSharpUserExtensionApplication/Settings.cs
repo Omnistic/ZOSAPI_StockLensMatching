@@ -566,7 +566,7 @@ namespace Reverse_SLM
             TheSystem.Save();
 
             // Remove potential DMFS from Merit Function
-            removeOperand(TheSystem.MFE, ZOSAPI.Editors.MFE.MeritOperandType.DMFS);
+            int DMFSPos = removeOperand(TheSystem.MFE, ZOSAPI.Editors.MFE.MeritOperandType.DMFS);
 
             // Save the MF
             mfPath = Path.Combine(dataDir, "DeleteMe.MF");
@@ -1141,6 +1141,12 @@ namespace Reverse_SLM
                 lines.Add(line);
             }
 
+            if (DMFSPos != -1)
+            {
+                line = "> WARNING: The DMFS operand of the Merit Function has been removed to enable automatic numbering of surface parameters ... \r\n";
+                lines.Add(line);
+            }
+
             for (int ii = 0; ii < nominalLenses.Count; ii++)
             {
                 line = "Component " + (ii + 1).ToString();
@@ -1221,8 +1227,9 @@ namespace Reverse_SLM
             TheApplication.ProgressMessage = tempMess;
         }
 
-        static void removeOperand(IMeritFunctionEditor MFE, ZOSAPI.Editors.MFE.MeritOperandType OpType)
+        static int removeOperand(IMeritFunctionEditor MFE, ZOSAPI.Editors.MFE.MeritOperandType OpType)
         {
+            int returnVal = -1;
             int numOp = MFE.NumberOfOperands + 1;
 
             for (int ii = 1; ii < numOp; ii++)
@@ -1231,8 +1238,11 @@ namespace Reverse_SLM
                 {
                     MFE.RemoveOperandAt(ii);
                     numOp--;
+                    returnVal = ii;
                 }
             }
+
+            return returnVal;
         }
 
         static public List<int> varAirThicknesses(ILensDataEditor TheLDE, int lastSurf)
