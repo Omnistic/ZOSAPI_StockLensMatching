@@ -106,6 +106,9 @@ For this example, running the standard SLM tool gives five EDMUND OPTICS lenses 
 
 If Reverse = True, the ZOS-API tool gives the same results as above because the EALING lens is already in the correct orientation by default.
 
+### PlanoConvexSinglet2.zmx
+This example is used to illustrate the matching with lenses of any element count and is described in [this post](https://community.zemax.com/got-a-question-7/stock-lens-matching-tool-lens-flip-side-1207?postid=5317#post5317).
+
 ### Petzval0.zmx
 This is the last example and it is taken from the sample file of nearly same name (without the 0). It is a lens composed of two cemented doublets and a singlet. The last surface has a Marginal Ray Height solve. I used the following settings for both tools without air thickness compensation, except I allowed the Reverse = True for the ZOS-API:
 
