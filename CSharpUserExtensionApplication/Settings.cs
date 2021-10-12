@@ -572,6 +572,12 @@ namespace Reverse_SLM
             mfPath = Path.Combine(dataDir, "DeleteMe.MF");
             TheSystem.MFE.SaveMeritFunction(mfPath);
 
+            // Restore the DMFS operand if necessary
+            if (DMFSPos != -1)
+            {
+                TheSystem.MFE.InsertNewOperandAt(DMFSPos).ChangeType(ZOSAPI.Editors.MFE.MeritOperandType.DMFS);
+            }
+
             // Open a copy of the system
             IOpticalSystem TheSystemCopy = TheSystem.CopySystem();
 
