@@ -249,6 +249,7 @@ namespace Reverse_SLM
             bool combinations = true;
             bool mfError = false;
             bool missingMatch = false;
+            bool hasPickup = false;
 
             // Variables
             int elemCount = 0;
@@ -398,7 +399,7 @@ namespace Reverse_SLM
             string dataDir = TheApplication.ZemaxDataDir;
 
             // First and last surfaces
-            int firstSurf = 1;
+            int firstSurf = 0;
             int lastSurf = TheLDE.NumberOfSurfaces - 1;
 
             // Initialization of list of nominal lenses
@@ -504,9 +505,8 @@ namespace Reverse_SLM
                         elemCount = 0;
                         hasVar = false;
                     }
-                    // Is it a new element of the lens (I'm not exactly sure how to treat two consecutive
-                    // surfaces with the same material, so it is currently unsupported), that is not a mirror?
-                    else if ((curMaterial != prevMaterial) && (curMaterial != "MIRROR"))
+                    // Is it a new element of the lens that is not a mirror?
+                    else if (curMaterial != "MIRROR")
                     {
                         // Has the EPD increased?
                         if (2 * curSurf.SemiDiameter > EPD)
@@ -596,6 +596,10 @@ namespace Reverse_SLM
                 TheLDECopy.GetSurfaceAt(surface_id).ThicknessCell.SetSolveData(ThicknessSolve);
             }
 
+            // Save pickup solves for Radius, Thickness, and Material
+            List<pickupSolve> pickupSolves =  listPickups(TheLDE, lastSurf);
+            List<pickupSolve> pickupsToRestore = new List<pickupSolve>();
+
             // Save the copy of the system with correct variables
             TheSystemCopy.SaveAs(tempPath);
 
@@ -683,6 +687,18 @@ namespace Reverse_SLM
                         thicknessAfter = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness;
                         ThicknessSolve = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.GetSolveData();
 
+                        // Check if we are removing surfaces which are picked-up
+                        pickupsToRestore.Clear();
+
+                        foreach (pickupSolve solve in pickupSolves)
+                        {
+                            if (Enumerable.Contains(Enumerable.Range(lenStart, elemCount + 1), solve.ReferenceSurface))
+                            {
+                                pickupsToRestore.Add(solve);
+                                hasPickup = true;
+                            }
+                        }
+
                         // Remove ideal lens
                         TheSystemCopy.LDE.RemoveSurfacesAt(lenStart, elemCount + 1);
 
@@ -690,6 +706,28 @@ namespace Reverse_SLM
                         if (!MatchedLens.InsertLensSeq(lenStart, ignoreObject, reverseGeometry))
                         {
                             insertionErrorFlag = true;
+                        }
+
+                        // Restore pickups
+                        if (hasPickup)
+                        {
+                            foreach (pickupSolve solve in pickupsToRestore)
+                            {
+                                switch (solve.Cell)
+                                {
+                                    case cells.Radius:
+                                        TheSystemCopy.LDE.GetSurfaceAt(solve.AppliedToSurface).RadiusCell.SetSolveData(solve.Solve);
+                                        break;
+                                    case cells.Thickness:
+                                        TheSystemCopy.LDE.GetSurfaceAt(solve.AppliedToSurface).ThicknessCell.SetSolveData(solve.Solve);
+                                        break;
+                                    case cells.Material:
+                                        TheSystemCopy.LDE.GetSurfaceAt(solve.AppliedToSurface).MaterialCell.SetSolveData(solve.Solve);
+                                        break;
+                                }
+                            }
+
+                            hasPickup = false;
                         }
 
                         // Restore thickness
@@ -933,6 +971,18 @@ namespace Reverse_SLM
                         thicknessAfter = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).Thickness;
                         ThicknessSolve = TheSystemCopy.LDE.GetSurfaceAt(lenStart + elemCount).ThicknessCell.GetSolveData();
 
+                        // Check if we are removing surfaces which are picked-up
+                        pickupsToRestore.Clear();
+
+                        foreach (pickupSolve solve in pickupSolves)
+                        {
+                            if (Enumerable.Contains(Enumerable.Range(lenStart, elemCount + 1), solve.ReferenceSurface))
+                            {
+                                pickupsToRestore.Add(solve);
+                                hasPickup = true;
+                            }
+                        }
+
                         // Remove ideal lens
                         TheSystemCopy.LDE.RemoveSurfacesAt(lenStart, elemCount + 1);
 
@@ -944,6 +994,28 @@ namespace Reverse_SLM
                         {
                             // Reverse the matched lens
                             TheLDECopy.RunTool_ReverseElements(lenStart, lenStart + elemCount);
+                        }
+
+                        // Restore pickups
+                        if (hasPickup)
+                        {
+                            foreach (pickupSolve solve in pickupsToRestore)
+                            {
+                                switch (solve.Cell)
+                                {
+                                    case cells.Radius:
+                                        TheSystemCopy.LDE.GetSurfaceAt(solve.AppliedToSurface).RadiusCell.SetSolveData(solve.Solve);
+                                        break;
+                                    case cells.Thickness:
+                                        TheSystemCopy.LDE.GetSurfaceAt(solve.AppliedToSurface).ThicknessCell.SetSolveData(solve.Solve);
+                                        break;
+                                    case cells.Material:
+                                        TheSystemCopy.LDE.GetSurfaceAt(solve.AppliedToSurface).MaterialCell.SetSolveData(solve.Solve);
+                                        break;
+                                }
+                            }
+
+                            hasPickup = false;
                         }
 
                         // Restore thickness
@@ -1114,7 +1186,9 @@ namespace Reverse_SLM
             }
             line = "Save Best:".PadRight(31) + saveBest.ToString();
             lines.Add(line);
-            line = "Both orientations:".PadRight(31) + reverseElements.ToString() + "\r\n";
+            line = "Both orientations:".PadRight(31) + reverseElements.ToString();
+            lines.Add(line);
+            line = "Ignore number of elements:".PadRight(31) + ignoreElemCount.ToString() + "\r\n";
             lines.Add(line);
 
             // Results
@@ -1255,7 +1329,7 @@ namespace Reverse_SLM
         {
             List<int> SurfaceIDs = new List<int>();
 
-            for (int ii = 1; ii < lastSurf; ii++)
+            for (int ii = 0; ii < lastSurf; ii++)
             {
                 if (TheLDE.GetSurfaceAt(ii).ThicknessCell.GetSolveData().Type == ZOSAPI.Editors.SolveType.Variable)
                 {
@@ -1264,6 +1338,38 @@ namespace Reverse_SLM
             }
 
             return SurfaceIDs;
+        }
+
+        static public List<pickupSolve> listPickups(ILensDataEditor TheLDE, int lastSurf)
+        {
+            List<pickupSolve> pickupSolves = new List<pickupSolve>();
+            int referenceSurface;
+            ZOSAPI.Editors.LDE.ILDERow surf;
+
+            for (int ii = 0; ii <= lastSurf; ii++)
+            {
+                surf = TheLDE.GetSurfaceAt(ii);
+
+                if (surf.RadiusCell.GetSolveData().Type == ZOSAPI.Editors.SolveType.SurfacePickup)
+                {
+                    referenceSurface = surf.RadiusCell.GetSolveData()._S_SurfacePickup.Surface;
+                    pickupSolves.Add(new pickupSolve(ii, referenceSurface, surf.RadiusCell.GetSolveData(), cells.Radius));
+                }
+
+                if (surf.ThicknessCell.GetSolveData().Type == ZOSAPI.Editors.SolveType.SurfacePickup)
+                {
+                    referenceSurface = surf.ThicknessCell.GetSolveData()._S_SurfacePickup.Surface;
+                    pickupSolves.Add(new pickupSolve(ii, referenceSurface, surf.ThicknessCell.GetSolveData(), cells.Thickness));
+                }
+
+                if (surf.MaterialCell.GetSolveData().Type == ZOSAPI.Editors.SolveType.SurfacePickup)
+                {
+                    referenceSurface = surf.MaterialCell.GetSolveData()._S_SurfacePickup.Surface;
+                    pickupSolves.Add(new pickupSolve(ii, referenceSurface, surf.MaterialCell.GetSolveData(), cells.Material));
+                }
+            }
+
+            return pickupSolves;
         }
 
         static void applyCatalogSettings(ILensCatalogs TheLensCatalog, int elemCount, double EFL, double EPD, double eflTolerance, double epdTolerance, string vendor)
@@ -1420,6 +1526,29 @@ namespace Reverse_SLM
             _tokenSource.Cancel();
             btnTerminate.Enabled = false;
         }
+    }
+
+    public enum cells
+    {
+        Radius,
+        Thickness,
+        Material
+    }
+
+    public class pickupSolve
+    {
+        public pickupSolve(int appliedToSurface, int referenceSurface, ZOSAPI.Editors.ISolveData solve, cells cell)
+        {
+            AppliedToSurface = appliedToSurface;
+            ReferenceSurface = referenceSurface;
+            Cell = cell;
+            Solve = solve;
+        }
+
+        public int AppliedToSurface;
+        public int ReferenceSurface;
+        public cells Cell;
+        public ZOSAPI.Editors.ISolveData Solve;
     }
 
     public class combination
